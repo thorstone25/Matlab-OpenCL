@@ -10,7 +10,7 @@ function T = oclDeviceTable(props)
 % string array or a cell array of character vectors where each entry is
 % one of the properties returned by gpuDevice.
 % 
-% See also cl_get_device_info, oclDeviceCount, oclDevice, gpuDeviceTable
+% See also oclDeviceCount, oclDevice, gpuDeviceTable
 
 arguments
     props (1,:) string = subsref(getOclFields(),substruct('()',{1:17})) % first 19 fields
