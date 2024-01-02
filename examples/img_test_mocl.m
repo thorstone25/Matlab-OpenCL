@@ -16,7 +16,7 @@ img = imnoise(img,'salt & pepper',0.06);
 
 % Run native matlab medfilt function and track execution time
 tic
-K = medfilt2(img, [W W], 'zeros');
+img_cpu = medfilt2(img, [W W], 'zeros');
 cpu_time=toc;
 
 %% Configure and Run OpenCL Kernel via oclKernel
@@ -24,7 +24,7 @@ kern = oclKernel('filter.cl', 'filter');
 
 % Set OpenCL workgroup dimensions depending on the size of the image(take care of bounds)
 [kern.GridOffset, kern.GridSize] = deal([W W 0], [sz - 2*W, 1]);
-kern.ThreadBlockSize(:) = 1;
+kern.ThreadBlockSize = [1 1 1];
 
 % Set OpenCL kernel defines
 kern.macros = ("WIDTH=" + sz(1));
@@ -36,10 +36,11 @@ kern.build();
 % Execute OpenCL median filter kernel and track total execution time
 % Use implicit memory allocation (default).
 tic
-[~, img_out] = kern.feval(img, img, 'inplace', false);
+[~, img_ocl] = kern.feval(img, img); % implicit allocation - analagous to CUDAKernel
+% kern.feval(img, img_ocl, 'inplace', true); % use in-place operation
 ocl_time=toc;
 
-%%
+% %%
 
 %Generate figure with results and runtimes
 cpu_title=sprintf(   'CPU Runtime: %.3f ms',cpu_time*1000);
@@ -51,10 +52,10 @@ imshow(img)
 title('Original')
 
 subplot(2,2,3)
-imshow(K)
+imshow(img_cpu)
 title(cpu_title)
 
 subplot(2,2,4)
-imshow(img_out)
+imshow(img_ocl)
 title(ocl_title)
 % xlabel(cl_times)
