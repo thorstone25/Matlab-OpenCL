@@ -1,4 +1,7 @@
 # Matlab-OpenCL
+
+[![License](https://licensebuttons.net/l/by-nc/3.0/88x31.png)](https://creativecommons.org/licenses/by-nc/4.0/legalcode)
+
 OpenCL kernel support to emulate CUDA kernel support in MATLAB
 
 This project provides an interface to run OpenCL kernels analagously to CUDA kernels provided by the [Parallel Computing Toolbox](https://www.mathworks.com/products/parallel-computing.html) in MATLAB. The API emulates the analagous classes in MATLAB to maximize code re-use while allowing for architectural differences in OpenCL. 
