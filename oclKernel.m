@@ -254,12 +254,13 @@ classdef oclKernel < matlab.mixin.Copyable
 
             % HACK: work-around a bug in MatCL (since I can't fix it ...):
             % if an argument is a const (in) pointer (vector) but the
-            % MATALB input data is scalar, set it to R/W so that MatCL
+            % MATLAB input data is scalar, set it to R/W so that MatCL
             % doesn't assume it's pass-by-value (scalar).
-            ro = kern.ioro ...
-                & ~(cellfun(@isscalar, varargout) ... data is scalar
+            ro = (kern.ioro ... only used as input
+                & ~(cellfun(@isscalar, varargout) ... data is non-scalar
                 & endsWith(kern.ArgumentTypes, " vector") ... kernel wants pointer
-                & contains(kern.ArgumentTypes, "in ")); % read-only arg
+                & contains(kern.ArgumentTypes, "in "))) ... % marked no-output
+                | endsWith(kern.ArgumentTypes, " scalar"); % set scalar inputs always read-only
 
             % launch the kernel
             cl_run_kernel(double(kern.Device.Index), cellstr(kern.funcname), ...
@@ -272,7 +273,7 @@ classdef oclKernel < matlab.mixin.Copyable
             tf = tf(~ro);
 
             % return native complex outputs where native complex input
-            varargout(tf) = cellfun(@C2R, varargout(tf), 'UniformOutput', 0);
+            varargout(tf) = cellfun(@R2C, varargout(tf), 'UniformOutput', 0);
         end
 
         function defineTypes(kern, types, aliases)
@@ -394,5 +395,5 @@ end
 
 % real -> complex
 function x = R2C(x)
-x = cast(reshape(complex(x(1,:), x(2,:)), size(x)), 'like', x);
+x = cast(reshape(complex(x(1,:), x(2,:)), size(x,2:ndims(x))), 'like', x);
 end
