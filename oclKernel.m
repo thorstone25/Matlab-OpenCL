@@ -104,7 +104,7 @@ classdef oclKernel < matlab.mixin.Copyable
             % CL kernel pattern
             if isempty(FUNC), fnm = alphanumericsPattern; else, fnm = FUNC; end
             pat = "kernel void" + whitespacePattern + fnm + "(" ...
-            + (asManyOfPattern(alphanumericsPattern|whitespacePattern|","|"*"|"_")) ...
+            + (asManyOfPattern(alphanumericsPattern|whitespacePattern|","|"*"|"_"|"["|"]")) ...
             + lookAheadBoundary(")");
 
             % soft validate that ~a~ kernel exists and is probably valid
@@ -329,7 +329,7 @@ classdef oclKernel < matlab.mixin.Copyable
         % function set.GlobalOffset(   kern, sz), kern.GlobalOffset(   1:numel(sz)) = sz; end % no effect
         function set.GridSize(kern, sz) % set GlobalSize via GridSize at current ThreadBlockSize
             arguments, kern (1,1) oclKernel, sz (1,:) {mustBeNumeric, mustBePositive}, end
-            kern.GlobalSize(1:numel(sz)) = sz ./ kern.ThreadBlockSize(1:numel(sz)); 
+            kern.GlobalSize(1:numel(sz)) = sz .* kern.ThreadBlockSize(1:numel(sz)); 
         end 
         function sz = get.GridSize(kern), sz = kern.GlobalSize ./ kern.ThreadBlockSize; end
         % get GridSize analagous to CUDAKernrl
@@ -414,5 +414,5 @@ end
 
 % real -> complex
 function x = R2C(x)
-x = cast(reshape(complex(x(1,:), x(2,:)), size(x,2:ndims(x))), 'like', x);
+x = cast(reshape(complex(x(1,:), x(2,:)), [size(x,2:ndims(x)),1]), 'like', x);
 end
