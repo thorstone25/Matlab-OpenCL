@@ -7,8 +7,13 @@ classdef oclKernel < matlab.mixin.Copyable
     end
     properties
         ThreadBlockSize (1,3) double {mustBeInteger, mustBeNonnegative} = 1; % local range
-        GridSize        (1,3) double {mustBeInteger, mustBePositive   } = 1; % global range size
-        GridOffset      (1,3) double {mustBeInteger, mustBeNonnegative} = 0; % global range offset
+    end
+    properties(Dependent)
+        GridSize        (1,3) double {mustBePositive}; % local range multiplier size (set/get 'GlobalSize')
+    end
+    properties
+        GlobalSize      (1,3) double {mustBeInteger, mustBePositive   } = 1; % global range size
+        GlobalOffset    (1,3) double {mustBeInteger, mustBeNonnegative} = 0; % global range offset
     end
     properties(Dependent, SetAccess=protected)
         MaxThreadsPerBlock (1,:) double % maximum number of concurrent work items
@@ -175,7 +180,7 @@ classdef oclKernel < matlab.mixin.Copyable
         function varargout = feval(kern, varargin, kwargs)
             % FEVAL - Evaluate Kernel on an OpenCL device
             %
-            % feval(kern, x1, ..., xn) evaluates the oclKernel kern with the given
+            % feval(KERN, x1, ..., xn) evaluates the oclKernel KERN with the given
             % arguments x1, ..., xn.  The number of input arguments, n, must equal
             % the value of the NumRHSArguments property of KERN, and the types of the
             % input arguments x1, ..., xn must match the description in the
@@ -222,12 +227,19 @@ classdef oclKernel < matlab.mixin.Copyable
             % if not built, build the kernel with defaults 
             if ~kern.built, kern = build(kern); end
 
-            % validate with the signature
+            % validate inputs with the signature
             if numel(varargin) ~= numel(kern.ioro)
                 error("oclKernel:wrongNumberInputs", ...
                     "Expected " + numel(kern.ioro) + " inputs. The kernel '" ...
                     + kern.funcname + "' has the following declaration:" ...
                     + newline + kern.signature + ";");
+            end
+
+            % validate ThreadBlockSize
+            if prod(kern.ThreadBlockSize) > kern.MaxThreadsPerBlock
+                error("oclKernel:ThreadBlockSize", "The work group size (" ...
+                    + prod(kern.ThreadBlockSize) + ") cannot exceed " ...
+                    + kern.MaxThreadsPerBlock + ".");
             end
 
             % init copy of inputs
@@ -242,6 +254,7 @@ classdef oclKernel < matlab.mixin.Copyable
 
             % cast data types to both a) ensure typing and b) force an 
             % explicit copy of all other inputs by confusing MATLAB
+            % TODO: recognize / convert half to uint16 via StoredInteger
             if ~kwargs.inplace
                 % get types
                 typs = split((kern.ArgumentTypes)')'; % args: {rw, class, size}
@@ -252,7 +265,7 @@ classdef oclKernel < matlab.mixin.Copyable
                 varargout(~i) = cellfun(@(x,T) cast(1*x,'like',x), varargout(~i), typs(2,~i), 'UniformOutput',0);
             end
 
-            % HACK: work-around a bug in MatCL (since I can't fix it ...):
+            % HACK: work-around a bug in MatCL (since I legally can't fix it ...):
             % if an argument is a const (in) pointer (vector) but the
             % MATLAB input data is scalar, set it to R/W so that MatCL
             % doesn't assume it's pass-by-value (scalar).
@@ -264,7 +277,7 @@ classdef oclKernel < matlab.mixin.Copyable
 
             % launch the kernel
             cl_run_kernel(double(kern.Device.Index), cellstr(kern.funcname), ...
-                [kern.GridOffset, kern.GridSize], kern.ThreadBlockSize, ...
+                [kern.GlobalOffset, kern.GlobalSize], kern.ThreadBlockSize, ...
                 varargout{:}, double(ro));
 
             % don't return read-only arguments
@@ -313,7 +326,13 @@ classdef oclKernel < matlab.mixin.Copyable
         % Dependent, Scalar
         % function set.ThreadBlockSize(kern, sz), kern.ThreadBlockSize(1:numel(sz)) = sz; end % no effect
         % function set.GridSize(       kern, sz), kern.GridSize(       1:numel(sz)) = sz; end % no effect
-        % function set.GridOffset(     kern, sz), kern.GridOffset(     1:numel(sz)) = sz; end % no effect
+        % function set.GlobalOffset(   kern, sz), kern.GlobalOffset(   1:numel(sz)) = sz; end % no effect
+        function set.GridSize(kern, sz) % set GlobalSize via GridSize at current ThreadBlockSize
+            arguments, kern (1,1) oclKernel, sz (1,:) {mustBeNumeric, mustBePositive}, end
+            kern.GlobalSize(1:numel(sz)) = sz ./ kern.ThreadBlockSize(1:numel(sz)); 
+        end 
+        function sz = get.GridSize(kern), sz = kern.GlobalSize ./ kern.ThreadBlockSize; end
+        % get GridSize analagous to CUDAKernrl
         function n = get.MaxThreadsPerBlock(kern)
             arguments, kern (1,1) oclKernel, end
             if isempty(kern.Device), n = []; 
