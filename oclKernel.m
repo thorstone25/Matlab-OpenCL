@@ -7,12 +7,12 @@ classdef oclKernel < matlab.mixin.Copyable
     end
     properties
         ThreadBlockSize (1,3) double {mustBeInteger, mustBeNonnegative} = 1; % local range
+        GridSize        (1,3) double {mustBePositive} = 1; % local range multiplier size (set/get 'GlobalSize')
     end
     properties(Dependent)
-        GridSize        (1,3) double {mustBePositive}; % local range multiplier size (set/get 'GlobalSize')
+        GlobalSize      (1,3) double {mustBeInteger, mustBePositive   }; % global range size
     end
     properties
-        GlobalSize      (1,3) double {mustBeInteger, mustBePositive   } = 1; % global range size
         GlobalOffset    (1,3) double {mustBeInteger, mustBeNonnegative} = 0; % global range offset
     end
     properties(Dependent, SetAccess=protected)
@@ -236,8 +236,16 @@ classdef oclKernel < matlab.mixin.Copyable
             end
 
             % validate ThreadBlockSize
+            if any(kern.ThreadBlockSize > kern.Device.MaxThreadBlockSize)
+                error("oclKernel:invalidThreadBlockSize", ...
+                    "The work group size of [" ...
+                    + join(string(kern.ThreadBlockSize),",") ...
+                    + "] cannot exceed the device limit of [" ...
+                    + join(string(kern.Device.MaxThreadBlockSize),",") ...
+                    + "].");
+            end
             if prod(kern.ThreadBlockSize) > kern.MaxThreadsPerBlock
-                error("oclKernel:ThreadBlockSize", "The work group size (" ...
+                error("oclKernel:invalidThreadBlockSize", "The number of work items (" ...
                     + prod(kern.ThreadBlockSize) + ") cannot exceed " ...
                     + kern.MaxThreadsPerBlock + ".");
             end
@@ -315,7 +323,6 @@ classdef oclKernel < matlab.mixin.Copyable
             kern.user_def_types = ktps; % set all
         end
 
-
         % Dependent, Vector
         function tf = get.built(kern)
             tf = cellfun(@eq     , {kern.Device.Index  }, {kern.built_dev_ind}) ...
@@ -327,11 +334,13 @@ classdef oclKernel < matlab.mixin.Copyable
         % function set.ThreadBlockSize(kern, sz), kern.ThreadBlockSize(1:numel(sz)) = sz; end % no effect
         % function set.GridSize(       kern, sz), kern.GridSize(       1:numel(sz)) = sz; end % no effect
         % function set.GlobalOffset(   kern, sz), kern.GlobalOffset(   1:numel(sz)) = sz; end % no effect
-        function set.GridSize(kern, sz) % set GlobalSize via GridSize at current ThreadBlockSize
+        function set.GlobalSize(kern, sz) % set GlobalSize via GridSize at current ThreadBlockSize
             arguments, kern (1,1) oclKernel, sz (1,:) {mustBeNumeric, mustBePositive}, end
-            kern.GlobalSize(1:numel(sz)) = sz .* kern.ThreadBlockSize(1:numel(sz)); 
+            i = 1:numel(sz);
+            kern.ThreadBlockSize(i) = gcd(kern.ThreadBlockSize(i), sz); % force compatible thread size
+            kern.GridSize(1:numel(sz)) = sz ./ kern.ThreadBlockSize(1:numel(sz));
         end 
-        function sz = get.GridSize(kern), sz = kern.GlobalSize ./ kern.ThreadBlockSize; end
+        function sz = get.GlobalSize(kern), sz = kern.GridSize .* kern.ThreadBlockSize; end
         % get GridSize analagous to CUDAKernrl
         function n = get.MaxThreadsPerBlock(kern)
             arguments, kern (1,1) oclKernel, end
@@ -361,7 +370,7 @@ classdef oclKernel < matlab.mixin.Copyable
             typs(1,~kern.ioro) = "inout"; % read-onlies
 
             % get vector vs. scalar
-            isptr = contains(inps, ["*", "["+digitsPattern+"]"]); % pointer vs. constant
+            isptr = contains(inps, ["*", "["+whitespacePattern(0,Inf)+digitsPattern+whitespacePattern(0,Inf)+"]"]); % pointer vs. constant
             typs(3, isptr) = "vector";
             typs(3,~isptr) = "scalar";
 

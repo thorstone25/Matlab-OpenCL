@@ -23,8 +23,8 @@ cpu_time=toc;
 kern = oclKernel('filter.cl', 'filter');
 
 % Set OpenCL workgroup dimensions depending on the size of the image(take care of bounds)
-[kern.GlobalOffset, kern.GlobalSize] = deal([W W 0], [sz - 2*W, 1]); % global offset and range
 kern.ThreadBlockSize = [1 1 1]; % work group size
+[kern.GlobalOffset, kern.GlobalSize] = deal([W W 0], [sz - 2*W, 1]); % global offset and range
 
 % Set OpenCL kernel defines
 kern.macros = ("WIDTH=" + sz(1));
