@@ -269,8 +269,8 @@ classdef oclKernel < matlab.mixin.Copyable
 
                 % cast recognized types, and recast unrecognized types
                 i = logical(cellfun(@(t) exist(t,'builtin'), typs(2,:))); % whether recognized
-                varargout( i) = cellfun(@(x,T) cast(1*x,T       ), varargout( i), typs(2, i), 'UniformOutput',0);
-                varargout(~i) = cellfun(@(x,T) cast(1*x,'like',x), varargout(~i), typs(2,~i), 'UniformOutput',0);
+                varargout( i) = cellfun(@(x,T) cast(x,T       ), varargout( i), typs(2, i), 'UniformOutput',0);
+                varargout(~i) = cellfun(@(x,T) cast(x,'like',x), varargout(~i), typs(2,~i), 'UniformOutput',0);
             end
 
             % HACK: work-around a bug in MatCL (since I legally can't fix it ...):
