@@ -274,7 +274,7 @@ classdef oclKernel < matlab.mixin.Copyable
             end
 
             % HACK: work-around a bug in MatCL (since I legally can't fix it ...):
-            % if an argument is a const (in) pointer (vector) but the
+            % if an argument is a const (input) pointer (vector) but the
             % MATLAB input data is scalar, set it to R/W so that MatCL
             % doesn't assume it's pass-by-value (scalar).
             ro = (kern.ioro ... only used as input
@@ -282,6 +282,17 @@ classdef oclKernel < matlab.mixin.Copyable
                 & endsWith(kern.ArgumentTypes, " vector") ... kernel wants pointer
                 & contains(kern.ArgumentTypes, "in "))) ... % marked no-output
                 | endsWith(kern.ArgumentTypes, " scalar"); % set scalar inputs always read-only
+
+            % HACK: work-around another bug in MatCL ...
+            % if an output kernel argument is going to be scalar, force it 
+            % to be a vector so that MatCL doesn't treat is as a constant 
+            % input
+            so = startsWith(kern.ArgumentTypes, "inout ") ... data is an output
+                & endsWith(kern.ArgumentTypes, " vector") ... kernel wants pointer
+                & cellfun(@isscalar, varargout); ... MATLAB data is scalar
+            
+            % append 0 to the argument to make it a vector
+            varargout(so) = cellfun(@(arg) [arg, 0], varargout(so), 'UniformOutput', 0);
 
             % launch the kernel
             cl_run_kernel(double(kern.Device.Index), cellstr(kern.funcname), ...
@@ -292,9 +303,13 @@ classdef oclKernel < matlab.mixin.Copyable
             ro = kern.ioro == 1; % read-only
             varargout = varargout(~ro); 
             tf = tf(~ro);
+            so = so(~ro);
 
-            % return native complex outputs where native complex input
+            % return only native complex outputs where native complex input
             varargout(tf) = cellfun(@R2C, varargout(tf), 'UniformOutput', 0);
+
+            % make scalar outputs scalar
+            varargout(so) = cellfun(@(arg) arg(1), varargout(so), 'UniformOutput', 0);
         end
 
         function defineTypes(kern, types, aliases)
