@@ -12,6 +12,11 @@ classdef oclDevice
         MaxThreadsPerBlock (1,1) double
         MaxShmemPerBlock (1,1) double
         MaxThreadBlockSize (1,3) double
+    end
+    properties(Constant)
+        MaxGridSize (1,3) double = Inf
+    end
+    properties(SetAccess=protected)
         TotalMemory (1,1) double
         MultiprocessorCount (1,1) double
         ClockRateKHz (1,1) double
@@ -79,7 +84,8 @@ classdef oclDevice
             D = repmat(D, size(S));
 
             % set the fields
-            for f = string(fieldnames(D))', [D.(f)] = S.(f); end
+            bl = "MaxGridSize"; % blacklist
+            for f = setdiff(string(fieldnames(D)), bl)', [D.(f)] = S.(f); end
         end
     end
 
