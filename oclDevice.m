@@ -51,7 +51,7 @@ classdef oclDevice
             end
 
             % get number of devices
-            N = oclDevice.numDevices();
+            N = oclDeviceCount();
 
             % get device index - select if requested
             idx = oclDevice.deviceSelection(idx);
@@ -96,11 +96,11 @@ classdef oclDevice
             
             persistent OCL_CURRENT_DEVICE_INDEX; % index
 
-            if idx > oclDevice.numDevices()
+            if idx > oclDeviceCount()
                 error( ...
                     "oclDevice:invalidDeviceIndex", ...
                     "Invalid OpenCL device id: "+idx ...
-                    +". Select a device id from the range 1:"+oclDevice.numDevices()+"." ...
+                    +". Select a device id from the range 1:"+oclDeviceCount()+"." ...
                     );
             end
 
@@ -113,11 +113,6 @@ classdef oclDevice
             persistent T_;
             if isempty(T_), T_ = oclDeviceTable(); end
             T = T_;
-        end
-
-        function N = numDevices()
-            T = oclDevice.deviceInfo();
-            N = height(T);
         end
     end
 end
