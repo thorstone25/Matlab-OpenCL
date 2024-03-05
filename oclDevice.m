@@ -62,8 +62,8 @@ classdef oclDevice
             % make this output roughly analgous to gpuDevice
             % append other inferred properties to match gpuDevice
             T.Index                 = (1:N)';
-            T.SupportsDouble        = cellfun(@(c) ismember("cl_khr_fp64", c), T.Extensions);
-            T.SupportsHalf          = cellfun(@(c) ismember("cl_khr_fp16", c), T.Extensions);
+            T.SupportsDouble        = arrayfun(@(c) ismember("cl_khr_fp64", c{1}), T.Extensions);
+            T.SupportsHalf          = arrayfun(@(c) ismember("cl_khr_fp16", c{1}), T.Extensions);
             T.MaxThreadsPerBlock    = T.MaxWorkGroupSize;
             T.MaxShmemPerBlock      = T.LocalMemSize;
             T.MaxThreadBlockSize    = T.MaxWorkItemSizes;
