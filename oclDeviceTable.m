@@ -25,7 +25,11 @@ i = startsWith(flds, pat);
 flds(i) = extractAfter(flds(i), pat);
 
 % query
-out = cl_get_device_info(cellstr(props))';
+if ~exist('cl_get_device_info','file') || parallel.internal.pool.isPoolThreadWorker
+    out = cell(0,length(props));
+else
+    out = cl_get_device_info(cellstr(props))';
+end
 
 % get number of devices
 N = size(out,1);
