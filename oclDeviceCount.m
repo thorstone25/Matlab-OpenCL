@@ -28,6 +28,7 @@ arguments
     COUNTMODE (1,1) string {mustBeMember(COUNTMODE, ["all","gpu","cpu","accelerator","default","custom"])} = "all"
 end
 
+if ~exist('cl_get_device_info','file') || parallel.internal.pool.isPoolThreadWorker, N = 0; IDX = 1:N; return; end
 T = cl_get_device_info(cellstr(["CL_DEVICE_TYPE"]));
 switch COUNTMODE
     case "all", IDX = 1:numel(T);
