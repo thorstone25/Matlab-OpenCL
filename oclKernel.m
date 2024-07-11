@@ -338,6 +338,28 @@ classdef oclKernel < matlab.mixin.Copyable
             kern.user_def_types = ktps; % set all
         end
 
+        % Compatability methods
+        function tf = existsOnGPU(kern), tf = kern.built; end
+        % EXISTSONGPU - determine if an oclKernel object is built on an oclDevice
+        %
+        % TF = existsOnGPU(KERNEL) returns a logical value indicating whether the  
+        % oclKernel object KERNEL is built for an oclDevice. The result will be true once
+        % the kernel is built, even if the oclKernel.Device is not the selected oclDevice.
+        %
+        % Note: This is a compatibility function for the parallel.gpu.CUDAKernel class.
+        %
+        % Example:
+        % oclDevice(1); % select the first available device
+        % K = oclKernel(which('test_kernel.cl'), 'test1'); % create the oclKernel (assumes double support)
+        % K.macros(end+1) = "DT=2.0"; % configure
+        % existsOnGPU(K) % returns false
+        % K.build(); 
+        % existsOnGPU(K) % returns true
+        % oclDevice([]);
+        % existsOnGPU(K) % returns true
+        % 
+        % See also parallel.gpu.CUDAKernel, oclDevice
+
         % Dependent, Vector
         function tf = get.built(kern)
             tf = cellfun(@eq     , {kern.Device.Index  }, {kern.built_dev_ind}) ...
