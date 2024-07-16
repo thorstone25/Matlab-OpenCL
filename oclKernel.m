@@ -357,14 +357,16 @@ classdef oclKernel < matlab.mixin.Copyable
         % existsOnGPU(K) % returns true
         % oclDevice([]);
         % existsOnGPU(K) % returns true
+        % K.Device = oclDevice();
+        % existsOnGPU(K) % returns false
         % 
         % See also parallel.gpu.CUDAKernel, oclDevice
 
         % Dependent, Vector
         function tf = get.built(kern)
-            tf = cellfun(@eq     , {kern.Device.Index  }, {kern.built_dev_ind}) ...
-            &    cellfun(@isequal, {kern.build_settings}, {kern.built_stgs}   );
-            tf = reshape(tf, size(kern));
+            tf = ~cellfun(@isempty, {kern.Device}); % non-empty Device
+            tf(tf) = arrayfun(@(k) isequal(k.Device.Index, k.built_dev_ind), kern(tf)) ...
+            &    arrayfun(@(k) isequal(k.build_settings, k.built_stgs ), kern(tf));
         end
 
         % Dependent, Scalar
