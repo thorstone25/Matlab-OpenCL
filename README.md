@@ -21,7 +21,7 @@ This project provides an interface to run OpenCL kernels analagously to CUDA ker
 ## Quick Start
 1. Download the repository and its submodules
 ```
-git clone --recurse-submodules https://github.com:thorstone25/Matlab-OpenCL.git
+git clone --recurse-submodules https://github.com/thorstone25/Matlab-OpenCL.git
 ```
 2. Open the [Project](https://www.mathworks.com/help/matlab/projects.html) in MATLAB
 ```
